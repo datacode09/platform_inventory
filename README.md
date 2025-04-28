@@ -225,7 +225,228 @@ memtester 16G 24
     System time     : 0.000000123 seconds slow  
   ```  
 
+Below is a **hyper-detailed network topology report template** for your on-premise UNIX environments (Dev, SIT, PAT, Prod/DR). Replace `[ ]` placeholders with environment-specific data. This report includes physical/logical layers, traffic flows, security policies, and forensic-level device configurations.
+
 ---
+
+# **Network Topology Report**  
+**Environment:** `[Dev/SIT/PAT/Prod/DR]`  
+**Audit Date:** `[DD/MM/YYYY]`  
+**Topology Toolchain:** `[Nmap, SolarWinds, Cisco CLI, NetFlow, Wireshark]`  
+
+---
+
+## **1. Physical Network Architecture**  
+### **1.1 Data Center Rack Layout**  
+| **Rack** | **Switch** | **Uplink Port** | **Connected Devices** | **Cable Type** | **Link Speed** |  
+|----------|------------|------------------|------------------------|-----------------|-----------------|  
+| `[Rack A]` | `[Cisco Nexus 93180YC-FX]` | `[Port 48]` | `[ESXi Hosts (1-4), Hadoop NN/DN]` | `[OM4 50/125]` | `[40GbE]` |  
+| `[...]` | `[...]` | `[...]` | `[...]` | `[...]` | `[...]` |  
+
+#### **1.2 Cross-Environment Physical Links**  
+```  
+Prod ↔ DR:  
+- Dark Fiber Pair: `[Fiber 12/24, 10km, DWDM Channel 32 (1550.12 nm)]`  
+- Latency: `[2.3 ms ±0.1ms]`  
+- Backup Link: `[MPLS Circuit ID: MPLS-4512]`  
+```
+
+---
+
+## **2. Logical Network Segmentation**  
+### **2.1 VLAN Architecture**  
+| **VLAN ID** | **Name** | **Subnet** | **Purpose** | **ACL Policy** |  
+|-------------|----------|------------|-------------|-----------------|  
+| `[10]` | `[Hadoop_Prod]` | `[10.10.5.0/24]` | `[Hadoop DataNode Traffic]` | `[Restrict to TCP/8020, 50010]` |  
+| `[20]` | `[Cassandra_DR]` | `[10.20.6.0/24]` | `[Cassandra Replication]` | `[Allow Prod↔DR on 7000-7001]` |  
+
+#### **2.2 BGP/OSPF Routing Tables**  
+```bash  
+# Core Router (Prod):  
+router bgp 65001  
+  neighbor 10.10.1.1 remote-as 65002  
+  network 10.10.5.0 mask 255.255.255.0  
+  maximum-paths 4  
+  route-map DENY-SSH out  
+```  
+
+---
+
+## **3. Firewall & Security Topology**  
+### **3.1 Zone-Based Firewall Rules**  
+| **Zone Pair** | **Source Zone** | **Dest Zone** | **Allowed Protocols** | **Inspect Policy** |  
+|---------------|-----------------|---------------|-----------------------|--------------------|  
+| `[Untrust→Hadoop]` | `[Internet]` | `[Hadoop_Prod]` | `[HTTPS/8443]` | `[Deep packet inspection for SQLi/XSS]` |  
+
+#### **3.2 Intrusion Prevention Signatures**  
+```bash  
+# Cisco FTD IPS Policy:  
+rule id 4000123  
+  action block  
+  service tcp/8020  
+  regex "(\bexec\s*\()"  
+  event-log 3  
+```  
+
+---
+
+## **4. Traffic Flow Analysis**  
+### **4.1 Hadoop Cluster Traffic**  
+| **Source** | **Destination** | **Protocol** | **Avg Bandwidth** | **Peak Time** |  
+|------------|-----------------|--------------|--------------------|----------------|  
+| `[DataNode 10.10.5.11]` | `[NameNode 10.10.5.10]` | `[TCP/8020]` | `[1.2 Gbps]` | `[14:00-15:00 UTC]` |  
+
+#### **4.2 Cassandra Replication Flow**  
+```  
+Prod → DR:  
+- Traffic Type: `[Hinted Handoff]`  
+- Ports: `[7000 (TLS), 7001 (Storage)]`  
+- Encryption: `[TLS 1.3 with AES-GCM 256]`  
+- Data Rate: `[24 TB/day]`  
+```
+
+---
+
+## **5. Network Device Configurations**  
+### **5.1 Core Switch (Cisco Nexus 93180YC-FX)**  
+```bash  
+interface Ethernet1/12  
+  description "Hadoop NameNode Uplink"  
+  switchport mode trunk  
+  switchport trunk allowed vlan 10,20  
+  spanning-tree port type edge trunk  
+  speed 40000  
+  no shutdown  
+```  
+
+#### **5.2 Load Balancer (F5 BIG-IP)**  
+```bash  
+virtual /Common/hadoop_http_vip {  
+  destination 10.10.5.100:80  
+  pool hadoop_web_pool  
+  ip-protocol tcp  
+  profiles {  
+    /Common/http { }  
+    /Common/client-ssl { context clientside }  
+  }  
+}  
+```
+
+---
+
+## **6. Failover & Redundancy**  
+### **6.1 HAProxy Keepalived Configuration**  
+```bash  
+vrrp_script chk_haproxy {  
+  script "killall -0 haproxy"  
+  interval 2  
+}  
+vrrp_instance VI_1 {  
+  virtual_router_id 51  
+  priority 150  
+  virtual_ipaddress {  
+    10.10.5.100/24 dev eth0  
+  }  
+}  
+```  
+
+#### **6.2 BFD (Bidirectional Forwarding Detection)**  
+```bash  
+router bgp 65001  
+  neighbor 10.10.1.1 fall-over bfd  
+  bfd interval 300 min_rx 300 multiplier 3  
+```
+
+---
+
+## **7. DNS & Service Discovery**  
+### **7.1 Internal DNS Records**  
+| **Hostname** | **IP** | **Record Type** | **TTL** | **Service** |  
+|--------------|--------|-----------------|---------|-------------|  
+| `[hadoop-nn01.prod]` | `[10.10.5.10]` | `[A]` | `[300]` | `[Hadoop NameNode]` |  
+| `[cassandra-seed.dr]` | `[10.20.6.50]` | `[SRV]` | `[60]` | `[Cassandra Gossip]` |  
+
+#### **7.2 Consul Service Mesh**  
+```bash  
+service {  
+  name = "hadoop-resourcemanager"  
+  port = 8088  
+  tags = ["prod", "hadoop"]  
+  check {  
+    args = ["curl -sS 10.10.5.10:8088/ws/v1/cluster"]  
+    interval = "30s"  
+  }  
+}  
+```
+
+---
+
+## **8. Monitoring & Telemetry**  
+### **8.1 NetFlow Analysis**  
+| **Device** | **Flow Export** | **Sampling Rate** | **Collector IP** | **Top Talkers** |  
+|------------|-----------------|--------------------|-------------------|------------------|  
+| `[nexus9k-01]` | `[NetFlow v9]` | `[1:100]` | `[10.10.8.5]` | `[10.10.5.11 → 10.10.5.10 (35%)]` |  
+
+#### **8.2 SNMP Traps**  
+```bash  
+snmp-server enable traps bgp  
+snmp-server host 10.10.8.5 version 2c PROD_RO  
+```
+
+---
+
+## **9. Validation & Compliance**  
+### **9.1 Penetration Test Results**  
+| **Vulnerability** | **CVSS Score** | **Mitigation** |  
+|--------------------|----------------|----------------|  
+| `[Open Hadoop RPC Port (8020)]` | `[7.5]` | `[Restrict to cluster IPs via ACL-4512]` |  
+
+#### **9.2 PCI-DSS Network Segmentation**  
+```  
+Cardholder Data Environment (CDE):  
+- VLAN 100: `[10.10.100.0/24]`  
+- Firewall Rule FW-1001: `[Deny all traffic from non-CDE zones]`  
+```
+
+---
+
+## **10. Diagrams & Attachments**  
+### **10.1 Logical Topology Diagram**  
+- **Placeholder:** `[Insert Lucidchart link]`  
+- **Key Layers:**  
+  - Layer 2 (VLANs)  
+  - Layer 3 (BGP/OSPF)  
+  - Application (Hadoop/Cassandra flows)  
+
+### **10.2 Physical Cable Map**  
+- **Spreadsheet:** `[Link to DCIM tool export]`  
+
+---
+
+## **11. Recommendations**  
+1. **Traffic Optimization:**  
+   - Enable `[ECN]` on Hadoop VLANs to reduce TCP retransmits during congestion.  
+2. **Security Hardening:**  
+   - Replace `[SSH-RSA]` with `[Ed25519]` for OOB management access.  
+3. **Failover Testing:**  
+   - Schedule `[biannual DR failover drills]` with Cassandra `[nodetool repair]`.  
+
+---
+
+## **12. Next Steps**  
+1. `[Integrate topology into NetBox/IPAM]`  
+2. `[Conduct WAR (Weekend Audit Run) for config drift detection]`  
+3. `[Implement Terraform for firewall rule automation]`  
+
+---
+
+**Appendices**  
+- **A.** Full Firewall Rulebase  
+- **B.** BGP/OSPF Route Tables  
+- **C.** Network Device Firmware Versions  
+- **D.** Glossary of Terms (VXLAN, BFD, ECMP)  
+
+Let me know if you need even *smaller* details, like MAC address aging timers or STP root bridge priorities!
 
 This template leaves no byte unexamined. For even deeper granularity, consider adding:  
 - **RAID stripe-size analysis**  
