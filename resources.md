@@ -1,0 +1,20 @@
+Here’s a table mapping each key theme and task to a top-recommended book to guide you through planning, building, and maintaining your platform:
+
+| Main Theme                      | Task                                                                                         | Best Book                                                                                             |
+|---------------------------------|----------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| **Inventory & Documentation**   | Create full inventories (physical servers, VMs, etc.) for Dev, SIT, PAT, Prod/DR            | *The Practice of Cloud System Administration* by Thomas A. Limoncelli, Strata R. Chalup, and Christina J. Hogan |
+| **Network Architecture**        | Create network topology for all environments (firewall, connection points)                  | *Network Warrior* by Gary A. Donahue                                                                  |
+| **Configuration Management**    | Document configuration of Hadoop, Cassandra, applications, and environmental scripts        | *Infrastructure as Code* by Kief Morris                                                               |
+| **Health Monitoring & SRE**     | Establish automated processes to ensure apps are up and system CPU/memory/storage is healthy | *Site Reliability Engineering* by Betsy Beyer et al.                                                  |
+| **Data Density Optimization**   | Decrease Cassandra data density by adding nodes or pruning old data                          | *Cassandra: The Definitive Guide* by Eben Hewitt                                                      |
+| **Workflow Automation**         | Automate manual workflows (monitoring, archiving, backups…)                                  | *Automate the Boring Stuff with Python* by Al Sweigart                                                 |
+| **Platform Migration**          | Plan and execute migration from RHEL 6 to RHEL 9                                               | *Red Hat Enterprise Linux 9 Essentials* by Neil Smyth                                                 |
+| **Runbooks & Documentation**    | Build runbooks for Hadoop, Cassandra, apps and collect rebuild steps                         | *The Site Reliability Workbook* by Betsy Beyer, Niall Richard Murphy, David K. Rensin, and Kent Kawahara |
+| **Security Compliance**         | Ensure security requirements (TDE for Hadoop/Hive and Cassandra)                             | *Hadoop Security: Protecting Your Big Data Platform* by Ben Spivey and Joey Echeverria                 |
+| **BAU Operations**              | Support monthly releases, code promotions, and application tenant support                    | *Continuous Delivery* by Jez Humble and David Farley                                                   |
+| **CI/CD Modernization**         | Streamline CI/CD pipelines; explore Jenkins + cloud-native tooling                           | *The DevOps Handbook* by Gene Kim, Jez Humble, Patrick Debois, and John Willis                         |
+| **Containerization & APIs**     | Containerize applications; implement API management & monitoring                             | *Kubernetes Up & Running* by Kelsey Hightower, Brendan Burns, and Joe Beda<br>*Building Microservices* by Sam Newman |
+| **Data Services & Analytics**   | Enable direct data retrieval via a service tier or analytical database                      | *Designing Data-Intensive Applications* by Martin Kleppmann                                           |
+| **Cloud & Virtualization**      | Migrate from VMware Cloud VMC1 to VMC2; web‐server migration                                 | *Mastering VMware vSphere 7* by Nick Marshall                                                         |
+
+Feel free to let me know if you’d like any other themes or tasks added!
