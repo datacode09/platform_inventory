@@ -1,7 +1,3 @@
-Absolutely! Below is a **Job Aid** formatted for onboarding and guiding platform engineers through the **VMC2 migration and RHEL9 physical server setup**. It includes sections for prerequisites, procedures, and checklist items.
-
----
-
 # 🛠️ Job Aid: VMC2 Migration & Red Hat 9 Server Setup for DEV Environment
 
 **Audience:** Platform Engineers
