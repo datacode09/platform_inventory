@@ -1,3 +1,107 @@
+
+Here’s a **comprehensive shell script** that collects the configuration files, installed tools, and services from a **RHEL 6 server**, suitable for auditing before migration. It will generate a set of output files you can archive or analyze further.
+
+---
+
+### **Script: `rhel6_inventory.sh`**
+
+```bash
+#!/bin/bash
+
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+OUTPUT_DIR="rhel6_audit_$TIMESTAMP"
+mkdir -p "$OUTPUT_DIR"
+
+echo "[*] Collecting installed packages..."
+rpm -qa --qf "%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}\n" | sort > "$OUTPUT_DIR/installed_packages.txt"
+
+echo "[*] Collecting enabled services..."
+chkconfig --list | grep ':on' > "$OUTPUT_DIR/enabled_services.txt"
+
+echo "[*] Collecting running processes..."
+ps auxww > "$OUTPUT_DIR/running_processes.txt"
+
+echo "[*] Collecting active network ports..."
+netstat -tulnp > "$OUTPUT_DIR/network_ports.txt"
+
+echo "[*] Collecting system users..."
+getent passwd > "$OUTPUT_DIR/passwd_entries.txt"
+
+echo "[*] Collecting group info..."
+getent group > "$OUTPUT_DIR/group_entries.txt"
+
+echo "[*] Collecting crontabs..."
+mkdir -p "$OUTPUT_DIR/crontabs"
+cp -r /var/spool/cron "$OUTPUT_DIR/crontabs" 2>/dev/null
+crontab -l > "$OUTPUT_DIR/root_crontab.txt" 2>/dev/null
+
+echo "[*] Collecting fstab and mounts..."
+cp /etc/fstab "$OUTPUT_DIR/fstab"
+mount > "$OUTPUT_DIR/mounts.txt"
+
+echo "[*] Collecting system and app configs..."
+mkdir -p "$OUTPUT_DIR/etc_samples"
+cp /etc/redhat-release "$OUTPUT_DIR/etc_samples/redhat-release"
+cp /etc/hosts "$OUTPUT_DIR/etc_samples/hosts"
+cp /etc/resolv.conf "$OUTPUT_DIR/etc_samples/resolv.conf"
+cp /etc/sysconfig/network "$OUTPUT_DIR/etc_samples/network"
+cp /etc/sysconfig/network-scripts/ifcfg-* "$OUTPUT_DIR/etc_samples/" 2>/dev/null
+cp /etc/selinux/config "$OUTPUT_DIR/etc_samples/selinux_config"
+cp /etc/ssh/sshd_config "$OUTPUT_DIR/etc_samples/sshd_config"
+
+echo "[*] Checking for big tech stack tools..."
+TOOLS=("java" "python" "spark-submit" "hadoop" "postgres" "cassandra" "nginx" "node" "npm" "git")
+> "$OUTPUT_DIR/tools_versions.txt"
+for tool in "${TOOLS[@]}"; do
+  if command -v $tool &> /dev/null; then
+    echo -n "$tool: " >> "$OUTPUT_DIR/tools_versions.txt"
+    $tool --version 2>&1 | head -n 1 >> "$OUTPUT_DIR/tools_versions.txt"
+  else
+    echo "$tool: Not Installed" >> "$OUTPUT_DIR/tools_versions.txt"
+  fi
+done
+
+echo "[*] Archiving results..."
+tar -czf "$OUTPUT_DIR.tar.gz" "$OUTPUT_DIR"
+echo "Done. Output saved in $OUTPUT_DIR.tar.gz"
+```
+
+---
+
+### **Instructions**
+
+1. Save the script:
+
+   ```bash
+   vi rhel6_inventory.sh
+   ```
+2. Make it executable:
+
+   ```bash
+   chmod +x rhel6_inventory.sh
+   ```
+3. Run as root or with `sudo`:
+
+   ```bash
+   sudo ./rhel6_inventory.sh
+   ```
+
+---
+
+### **What You’ll Get**
+
+* `installed_packages.txt`: List of all RPMs
+* `enabled_services.txt`: Services set to start on boot
+* `tools_versions.txt`: Java, Spark, Python, etc.
+* `crontabs/`: All user-level crontabs
+* `etc_samples/`: Key `/etc` configs (network, SSH, SELinux)
+* `mounts.txt`, `fstab`, `passwd_entries.txt`, `group_entries.txt`, etc.
+* Output is compressed as `rhel6_audit_<timestamp>.tar.gz`
+
+---
+
+Would you like a follow-up script that takes this report and **maps each tool/config to its RHEL 9 replacement or compatibility check**?
+
 Here is a **sample RHEL 9 provisioning script** that could be auto-generated from the inventory produced by the `generate_rhel6_inventory.sh` script. It sets up:
 
 * Required packages and runtimes
